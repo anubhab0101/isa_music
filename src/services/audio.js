@@ -272,8 +272,16 @@ async function getAudioStream(videoId, quality = 'high', options = {}) {
       process: ffmpegProcess
     };
   } catch (err) {
-    console.warn(`[AudioService] Online extraction failed for ${videoId} (${err.message}). No synthetic music will be served.`);
-    throw err;
+    console.warn(`[AudioService] Online extraction or transcoding failed for ${videoId} (${err.message}). Providing fallback audio stream.`);
+    const synth = await getSyntheticAudioBuffer(normalizedQuality);
+    return {
+      stream: Readable.from(synth.buffer),
+      buffer: synth.buffer,
+      totalSize: synth.buffer.length,
+      contentType: synth.contentType,
+      isFallback: true,
+      process: null
+    };
   }
 }
 

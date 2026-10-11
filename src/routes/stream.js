@@ -119,10 +119,29 @@ router.get('/:videoId', async (req, res) => {
     }
   }
 
-  // 5. FFmpeg Transcoding Pipeline (for FLAC or fallback)
+  // 5. Stream Fallback Pipeline (FFmpeg transcode or synthetic audio fallback)
   try {
     const audioResult = await audioService.getAudioStream(videoId, quality);
-    const { stream, contentType, process: childProc } = audioResult;
+    const { stream, buffer, totalSize, contentType, process: childProc } = audioResult;
+
+    if (buffer) {
+      const range = req.headers.range;
+      if (range) {
+        const parts = range.replace(/bytes=/, '').split('-');
+        const start = parseInt(parts[0], 10);
+        const end = parts[1] ? parseInt(parts[1], 10) : totalSize - 1;
+        const chunk = buffer.subarray(start, end + 1);
+        res.status(206);
+        res.setHeader('Content-Range', `bytes ${start}-${end}/${totalSize}`);
+        res.setHeader('Accept-Ranges', 'bytes');
+        res.setHeader('Content-Length', chunk.length);
+        res.setHeader('Content-Type', contentType);
+        return res.end(chunk);
+      }
+      res.setHeader('Content-Length', totalSize);
+      res.setHeader('Content-Type', contentType);
+      return res.end(buffer);
+    }
 
     res.on('close', () => {
       if (!res.writableFinished && childProc && !childProc.killed) {

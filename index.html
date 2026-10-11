@@ -728,8 +728,10 @@ AIzaKey3"></textarea>
         </div>
     </div>
 
-    <!-- Hidden Audio Streaming Pipeline Containers -->
-    <div id="youtube-player" style="position: absolute; left: -9999px; width: 0; height: 0; border: none;"></div>
+    <!-- Audio Streaming Pipeline Containers -->
+    <div id="youtube-player-container" style="position: fixed; left: -9999px; bottom: -9999px; width: 320px; height: 240px; pointer-events: none; z-index: -999;">
+        <div id="youtube-player"></div>
+    </div>
     <audio id="audio-pipeline-a" preload="auto" style="display: none;"></audio>
     <audio id="audio-pipeline-b" preload="auto" style="display: none;"></audio>
 

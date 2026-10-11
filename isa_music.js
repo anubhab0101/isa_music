@@ -206,6 +206,146 @@ class WebAudioCrossfadeEngine {
     this.isCrossfading = false;
     this.crossfadeTimer = null;
     this.isInitialized = false;
+
+    // Hybrid YouTube Iframe Streaming Engine (Zero server bandwidth / 100% cloud-proof)
+    this.ytPlayer = null;
+    this.ytReady = false;
+    this.ytTicker = null;
+    this.activeMode = 'youtube'; // 'youtube' (online) | 'html5' (offline IndexedDB)
+    this.queuedTrack = null;
+    this.queuedStartTime = 0;
+    this._ytInitializing = false;
+  }
+
+  // Initialize YouTube Iframe Player for zero-bandwidth client playback
+  initYouTubePlayer() {
+    if (typeof window === 'undefined') return;
+    if (this.ytPlayer || this._ytInitializing) return;
+
+    const setupPlayer = () => {
+      if (this.ytPlayer || !window.YT || !window.YT.Player) return;
+      const target = document.getElementById('youtube-player');
+      if (!target) return;
+
+      this._ytInitializing = true;
+      try {
+        this.ytPlayer = new window.YT.Player('youtube-player', {
+          height: '100%',
+          width: '100%',
+          videoId: '',
+          playerVars: {
+            autoplay: 0,
+            controls: 0,
+            disablekb: 1,
+            fs: 0,
+            modestbranding: 1,
+            rel: 0,
+            playsinline: 1,
+            origin: window.location.origin
+          },
+          events: {
+            onReady: () => {
+              this.ytReady = true;
+              this._ytInitializing = false;
+              console.log('[YouTube Player] Ready for client streaming');
+              if (typeof this.ytPlayer.setVolume === 'function') {
+                this.ytPlayer.setVolume(Math.round(appState.volume * 100));
+              }
+              if (this.queuedTrack) {
+                const queued = this.queuedTrack;
+                const startSec = this.queuedStartTime || 0;
+                this.queuedTrack = null;
+                this.queuedStartTime = 0;
+                this.playTrack(queued, { startTime: startSec });
+              }
+            },
+            onStateChange: (event) => {
+              this.handleYouTubeStateChange(event.data);
+            },
+            onError: (event) => {
+              console.warn('[YouTube Player] Event error code:', event.data);
+              setBufferingUI(false);
+              if (event.data === 101 || event.data === 150 || event.data === 100) {
+                showToast('This track embedding is restricted by YouTube. Skipping to next...', 'warning');
+                setTimeout(() => onAutoAdvance(), 1000);
+              } else {
+                showToast('Playback connection issue. Retrying next song...', 'error');
+                setPlayPauseUI(false);
+              }
+            }
+          }
+        });
+      } catch (err) {
+        console.warn('[YouTube Player] Initialization exception:', err);
+        this._ytInitializing = false;
+      }
+    };
+
+    if (window.YT && window.YT.Player) {
+      setupPlayer();
+    } else {
+      const existingCallback = window.onYouTubeIframeAPIReady;
+      window.onYouTubeIframeAPIReady = () => {
+        if (typeof existingCallback === 'function') existingCallback();
+        setupPlayer();
+      };
+    }
+  }
+
+  handleYouTubeStateChange(state) {
+    if (this.activeMode !== 'youtube') return;
+
+    // YT.PlayerState: -1: unstarted, 0: ended, 1: playing, 2: paused, 3: buffering, 5: cued
+    if (state === 1) { // PLAYING
+      appState.isPlaying = true;
+      setBufferingUI(false);
+      setPlayPauseUI(true);
+      this.startYouTubeTicker();
+    } else if (state === 2) { // PAUSED
+      appState.isPlaying = false;
+      setBufferingUI(false);
+      setPlayPauseUI(false);
+      this.stopYouTubeTicker();
+    } else if (state === 3) { // BUFFERING
+      setBufferingUI(true);
+    } else if (state === 0) { // ENDED
+      setBufferingUI(false);
+      this.stopYouTubeTicker();
+      onAutoAdvance();
+    }
+  }
+
+  startYouTubeTicker() {
+    this.stopYouTubeTicker();
+    this.ytTicker = setInterval(() => {
+      if (this.ytPlayer && typeof this.ytPlayer.getCurrentTime === 'function') {
+        try {
+          const curTime = this.ytPlayer.getCurrentTime() || 0;
+          const duration = this.ytPlayer.getDuration() || appState.currentTrack?.duration || 0;
+          if (duration > 0 && (!appState.currentTrack?.duration || appState.currentTrack.duration <= 0)) {
+            if (appState.currentTrack) appState.currentTrack.duration = duration;
+          }
+          onPlaybackTimeUpdate(curTime, duration);
+        } catch (_) {}
+      }
+    }, 250);
+  }
+
+  stopYouTubeTicker() {
+    if (this.ytTicker) {
+      clearInterval(this.ytTicker);
+      this.ytTicker = null;
+    }
+  }
+
+  getCurrentTime() {
+    if (this.activeMode === 'youtube' && this.ytPlayer && typeof this.ytPlayer.getCurrentTime === 'function') {
+      try {
+        return this.ytPlayer.getCurrentTime() || 0;
+      } catch (_) {}
+    }
+    const activeDeck = this.getActiveDeck();
+    return activeDeck?.audio?.currentTime || 0;
   }
 
   // Initialize Web Audio graph on user gesture
@@ -385,26 +525,21 @@ class WebAudioCrossfadeEngine {
     });
   }
 
-  // Play track with crossfade transition (supports local IndexedDB offline playback)
+  // Play track with hybrid engine (YouTube Iframe for online, Web Audio for offline)
   async playTrack(track, options = {}) {
-    this.ensureAudioContext();
+    if (!track || !track.videoId) return;
     const { startTime = 0, forceInstant = false } = options;
 
-    const outDeck = this.getActiveDeck();
-    const inDeckIdx = 1 - this.activeDeckIdx;
-    const inDeck = this.decks[inDeckIdx];
+    let isOffline = false;
+    let offlineBlobUrl = null;
 
-    let streamUrl = '';
     // Check if offline audio blob is saved locally in IndexedDB
     try {
       if (typeof getOfflineTrack === 'function') {
         const offlineItem = await getOfflineTrack(track.videoId);
         if (offlineItem && offlineItem.blob) {
-          if (inDeck._blobUrl) {
-            try { URL.revokeObjectURL(inDeck._blobUrl); } catch (_) {}
-          }
-          inDeck._blobUrl = URL.createObjectURL(offlineItem.blob);
-          streamUrl = inDeck._blobUrl;
+          isOffline = true;
+          offlineBlobUrl = URL.createObjectURL(offlineItem.blob);
           if (typeof navigator !== 'undefined' && !navigator.onLine) {
             showToast(`Playing "${track.title}" from offline storage`, 'info');
           }
@@ -412,61 +547,115 @@ class WebAudioCrossfadeEngine {
       }
     } catch (_) {}
 
-    if (!streamUrl) {
-      if (typeof navigator !== 'undefined' && !navigator.onLine) {
-        showToast(`You are offline. Download "${track.title}" while online to play offline.`, 'warning');
-        setBufferingUI(false);
-        return;
+    if (isOffline && offlineBlobUrl) {
+      // -------------------------------------------------------------
+      // MODE 1: OFFLINE PLAYBACK (Dual-Deck Web Audio API)
+      // -------------------------------------------------------------
+      this.activeMode = 'html5';
+      this.stopYouTubeTicker();
+      if (this.ytPlayer && typeof this.ytPlayer.pauseVideo === 'function') {
+        try { this.ytPlayer.pauseVideo(); } catch (_) {}
       }
-      streamUrl = api.getStreamUrl(track.videoId, appState.quality);
+
+      this.ensureAudioContext();
+      const outDeck = this.getActiveDeck();
+      const inDeckIdx = 1 - this.activeDeckIdx;
+      const inDeck = this.decks[inDeckIdx];
+
+      if (inDeck._blobUrl) {
+        try { URL.revokeObjectURL(inDeck._blobUrl); } catch (_) {}
+      }
+      inDeck._blobUrl = offlineBlobUrl;
+      const duration = forceInstant ? 0 : appState.crossfadeDuration;
+
+      inDeck.track = track;
+      inDeck.hasTriggeredAdvance = false;
+      inDeck.audio.src = offlineBlobUrl;
+      inDeck.audio.currentTime = startTime;
+
+      setBufferingUI(true);
+
+      const playPromise = inDeck.audio.play();
+      if (playPromise !== undefined) {
+        playPromise.then(() => {
+          appState.isPlaying = true;
+          appState.currentTrack = track;
+          updateNowPlayingUI(track);
+          setPlayPauseUI(true);
+          if (typeof recordRecentTrack === 'function') {
+            recordRecentTrack(track);
+          }
+
+          if (outDeck.audio && !outDeck.audio.paused && duration > 0) {
+            this.executeCrossfade(outDeck, inDeck, inDeckIdx, duration);
+          } else {
+            this.finalizeSwitch(outDeck, inDeck, inDeckIdx);
+          }
+        }).catch(err => {
+          console.warn('[Offline Playback Start Error]:', err);
+          setBufferingUI(false);
+        });
+      }
+      return;
     }
 
-    const duration = forceInstant ? 0 : appState.crossfadeDuration;
+    // -----------------------------------------------------------------
+    // MODE 2: ONLINE YOUTUBE IFRAME PLAYBACK (Official Client-Side Stream)
+    // -----------------------------------------------------------------
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      showToast(`You are offline. Download "${track.title}" while online to play offline.`, 'warning');
+      setBufferingUI(false);
+      return;
+    }
 
-    inDeck.track = track;
-    inDeck.hasTriggeredAdvance = false;
-    inDeck.audio.src = streamUrl;
-    inDeck.audio.currentTime = startTime;
+    this.activeMode = 'youtube';
 
+    // Pause any active HTML5 audio decks
+    this.decks.forEach(d => {
+      if (d.audio && !d.audio.paused) {
+        d.audio.pause();
+        d.audio.currentTime = 0;
+      }
+    });
+
+    appState.currentTrack = track;
+    updateNowPlayingUI(track);
     setBufferingUI(true);
+    if (typeof recordRecentTrack === 'function') {
+      recordRecentTrack(track);
+    }
 
-    // Fetch track duration if missing from metadata
+    // Fetch track duration info in background if not known
     if (!track.duration || track.duration <= 0) {
       api.getTrackInfo(track.videoId).then(info => {
         if (info && info.duration) {
           track.duration = info.duration;
           if (appState.currentTrack && appState.currentTrack.videoId === track.videoId) {
-            const activeAudio = this.getActiveDeck()?.audio;
-            const curTime = activeAudio?.currentTime || 0;
-            const dur = (activeAudio && isFinite(activeAudio.duration) && activeAudio.duration > 0)
-              ? activeAudio.duration
-              : info.duration;
-            onPlaybackTimeUpdate(curTime, dur);
+            const curTime = this.getCurrentTime();
+            onPlaybackTimeUpdate(curTime, info.duration);
           }
         }
       }).catch(() => {});
     }
 
-    const playPromise = inDeck.audio.play();
-    if (playPromise !== undefined) {
-      playPromise.then(() => {
-        appState.isPlaying = true;
-        appState.currentTrack = track;
-        updateNowPlayingUI(track);
-        setPlayPauseUI(true);
-        if (typeof recordRecentTrack === 'function') {
-          recordRecentTrack(track);
+    if (this.ytReady && this.ytPlayer && typeof this.ytPlayer.loadVideoById === 'function') {
+      try {
+        this.ytPlayer.loadVideoById({
+          videoId: track.videoId,
+          startSeconds: startTime
+        });
+        if (typeof this.ytPlayer.setVolume === 'function') {
+          this.ytPlayer.setVolume(Math.round(appState.volume * 100));
         }
-
-        if (outDeck.audio && !outDeck.audio.paused && duration > 0) {
-          this.executeCrossfade(outDeck, inDeck, inDeckIdx, duration);
-        } else {
-          this.finalizeSwitch(outDeck, inDeck, inDeckIdx);
-        }
-      }).catch(err => {
-        console.warn('[Playback Start Error]:', err);
+        this.ytPlayer.playVideo();
+      } catch (err) {
+        console.warn('[YouTube Play Video Error]:', err);
         setBufferingUI(false);
-      });
+      }
+    } else {
+      this.queuedTrack = track;
+      this.queuedStartTime = startTime;
+      this.initYouTubePlayer();
     }
   }
 
@@ -563,6 +752,26 @@ class WebAudioCrossfadeEngine {
   }
 
   togglePlayPause() {
+    if (this.activeMode === 'youtube' && this.ytPlayer && typeof this.ytPlayer.getPlayerState === 'function') {
+      try {
+        const state = this.ytPlayer.getPlayerState();
+        if (state === 1) { // Currently playing
+          this.ytPlayer.pauseVideo();
+          appState.isPlaying = false;
+          setPlayPauseUI(false);
+          this.stopYouTubeTicker();
+        } else {
+          this.ytPlayer.playVideo();
+          appState.isPlaying = true;
+          setPlayPauseUI(true);
+          this.startYouTubeTicker();
+        }
+        return;
+      } catch (err) {
+        console.warn('[YouTube Toggle Error]:', err);
+      }
+    }
+
     this.ensureAudioContext();
     const activeDeck = this.getActiveDeck();
     if (!activeDeck.audio) return;
@@ -580,6 +789,21 @@ class WebAudioCrossfadeEngine {
   }
 
   seek(percentage) {
+    if (this.activeMode === 'youtube' && this.ytPlayer && typeof this.ytPlayer.seekTo === 'function') {
+      let dur = 0;
+      try { dur = this.ytPlayer.getDuration() || 0; } catch (_) {}
+      if (!dur || dur <= 0) dur = appState.currentTrack?.duration || 0;
+
+      if (dur > 0) {
+        const targetTime = Math.max(0, Math.min(percentage * dur, dur));
+        try {
+          this.ytPlayer.seekTo(targetTime, true);
+          onPlaybackTimeUpdate(targetTime, dur);
+        } catch (_) {}
+      }
+      return;
+    }
+
     const activeDeck = this.getActiveDeck();
     if (!activeDeck.audio) return;
     const effectiveDuration = (activeDeck.audio.duration && isFinite(activeDeck.audio.duration) && activeDeck.audio.duration > 0)
@@ -598,6 +822,12 @@ class WebAudioCrossfadeEngine {
     appState.volume = clamped;
     if (typeof localStorage !== 'undefined') {
       localStorage.setItem('isa_volume', clamped);
+    }
+
+    if (this.ytPlayer && typeof this.ytPlayer.setVolume === 'function') {
+      try {
+        this.ytPlayer.setVolume(Math.round(clamped * 100));
+      } catch (_) {}
     }
 
     if (this.masterGain && this.audioCtx) {
@@ -888,6 +1118,9 @@ if (typeof document !== 'undefined') {
 }
 
 function initDOM() {
+  // Pre-initialize YouTube Player
+  engine.initYouTubePlayer();
+
   // 1. First user interaction unlock for Web Audio API
   const unlockAudio = () => {
     engine.ensureAudioContext();
@@ -2001,9 +2234,9 @@ async function playNextTrack() {
 }
 
 function playPrevTrack() {
-  const activeDeck = engine.getActiveDeck();
-  if (activeDeck.audio && activeDeck.audio.currentTime > 3.0) {
-    activeDeck.audio.currentTime = 0;
+  const curTime = engine.getCurrentTime();
+  if (curTime > 3.0) {
+    engine.seek(0);
     return;
   }
   if (appState.playlist.length === 0) return;
