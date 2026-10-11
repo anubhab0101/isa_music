@@ -265,11 +265,18 @@ class WebAudioCrossfadeEngine {
             onError: (event) => {
               console.warn('[YouTube Player] Event error code:', event.data);
               setBufferingUI(false);
+              this.consecutiveErrors = (this.consecutiveErrors || 0) + 1;
+              if (this.consecutiveErrors >= 3) {
+                showToast('Playback issue. Tap play on any song to retry.', 'error');
+                appState.isPlaying = false;
+                setPlayPauseUI(false);
+                return;
+              }
               if (event.data === 101 || event.data === 150 || event.data === 100) {
-                showToast('This track embedding is restricted by YouTube. Skipping to next...', 'warning');
-                setTimeout(() => onAutoAdvance(), 1000);
+                showToast('Track embedding restricted by YouTube. Skipping to next...', 'warning');
+                setTimeout(() => onAutoAdvance(), 1500);
               } else {
-                showToast('Playback connection issue. Retrying next song...', 'error');
+                showToast('Playback issue. Tap play to retry.', 'error');
                 setPlayPauseUI(false);
               }
             }
@@ -297,6 +304,7 @@ class WebAudioCrossfadeEngine {
 
     // YT.PlayerState: -1: unstarted, 0: ended, 1: playing, 2: paused, 3: buffering, 5: cued
     if (state === 1) { // PLAYING
+      this.consecutiveErrors = 0;
       appState.isPlaying = true;
       setBufferingUI(false);
       setPlayPauseUI(true);
@@ -431,6 +439,7 @@ class WebAudioCrossfadeEngine {
     if (!audio) return;
 
     audio.addEventListener('timeupdate', () => {
+      if (this.activeMode !== 'html5') return;
       if (deckIdx === this.activeDeckIdx) {
         onPlaybackTimeUpdate(audio.currentTime, audio.duration);
 
@@ -452,18 +461,19 @@ class WebAudioCrossfadeEngine {
     });
 
     audio.addEventListener('waiting', () => {
+      if (this.activeMode !== 'html5') return;
       if (deckIdx === this.activeDeckIdx) {
         setBufferingUI(true);
       }
     });
 
     audio.addEventListener('stalled', () => {
+      if (this.activeMode !== 'html5') return;
       if (deckIdx === this.activeDeckIdx) {
         setBufferingUI(true);
-        // Automatic slow network recovery: attempt gentle unpause if stalled
         if (!audio.paused && audio.readyState < 3) {
           setTimeout(() => {
-            if (!audio.paused && audio.readyState < 3) {
+            if (this.activeMode === 'html5' && !audio.paused && audio.readyState < 3) {
               audio.play().catch(() => {});
             }
           }, 2500);
@@ -472,30 +482,35 @@ class WebAudioCrossfadeEngine {
     });
 
     audio.addEventListener('playing', () => {
+      if (this.activeMode !== 'html5') return;
       if (deckIdx === this.activeDeckIdx) {
         setBufferingUI(false);
       }
     });
 
     audio.addEventListener('canplay', () => {
+      if (this.activeMode !== 'html5') return;
       if (deckIdx === this.activeDeckIdx) {
         setBufferingUI(false);
       }
     });
 
     audio.addEventListener('canplaythrough', () => {
+      if (this.activeMode !== 'html5') return;
       if (deckIdx === this.activeDeckIdx) {
         setBufferingUI(false);
       }
     });
 
     audio.addEventListener('pause', () => {
+      if (this.activeMode !== 'html5') return;
       if (deckIdx === this.activeDeckIdx) {
         setBufferingUI(false);
       }
     });
 
     audio.addEventListener('ended', () => {
+      if (this.activeMode !== 'html5') return;
       setBufferingUI(false);
       if (deckIdx === this.activeDeckIdx && !this.isCrossfading) {
         onAutoAdvance();
@@ -503,24 +518,11 @@ class WebAudioCrossfadeEngine {
     });
 
     audio.addEventListener('error', (e) => {
+      if (this.activeMode !== 'html5') return;
       console.warn(`[Deck ${deck.id} Audio Error]:`, e);
       if (deckIdx === this.activeDeckIdx) {
         setBufferingUI(false);
-        showToast('Stream buffer connection error. Reconnecting...', 'error');
-        if (!deck._reconnecting) {
-          deck._reconnecting = true;
-          setTimeout(() => {
-            if (appState.currentTrack && appState.isPlaying) {
-              const curPos = audio.currentTime || 0;
-              audio.src = api.getStreamUrl(appState.currentTrack.videoId, appState.quality);
-              audio.currentTime = curPos;
-              audio.play().catch(() => setPlayPauseUI(false));
-            }
-            deck._reconnecting = false;
-          }, 1500);
-        } else {
-          setPlayPauseUI(false);
-        }
+        setPlayPauseUI(false);
       }
     });
   }

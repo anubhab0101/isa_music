@@ -26,11 +26,14 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "https://www.youtube.com"],
-      imgSrc: ["'self'", "data:", "https://i.ytimg.com", "https://*.ytimg.com", "https://img.youtube.com"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://www.youtube.com", "https://*.youtube.com", "https://s.ytimg.com", "https://*.ytimg.com"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "data:", "https://fonts.gstatic.com"],
+      imgSrc: ["'self'", "data:", "blob:", "https://i.ytimg.com", "https://*.ytimg.com", "https://img.youtube.com", "https://*.googleusercontent.com"],
       mediaSrc: ["'self'", "blob:", "http://localhost:*", "https://*"],
-      connectSrc: ["'self'", "https://www.googleapis.com"],
-      frameSrc: ["'self'", "https://www.youtube.com"],
+      connectSrc: ["'self'", "https://www.googleapis.com", "https://*.youtube.com", "https://*.googlevideo.com", "https://*.google.com"],
+      frameSrc: ["'self'", "https://www.youtube.com", "https://*.youtube.com", "https://www.youtube-nocookie.com"],
+      childSrc: ["'self'", "https://www.youtube.com", "https://*.youtube.com", "https://www.youtube-nocookie.com"]
     }
   },
   crossOriginResourcePolicy: { policy: "cross-origin" }

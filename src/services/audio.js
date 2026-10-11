@@ -49,7 +49,7 @@ function isValidVideoId(id) {
 /**
  * Generates a valid pure-JavaScript RIFF PCM WAV buffer (zero external process dependency).
  */
-function generateWavBuffer(durationSec = 2, freq = 440, sampleRate = 44100) {
+function generateWavBuffer(durationSec = 2, freq = 0, sampleRate = 44100) {
   const numSamples = Math.floor(durationSec * sampleRate);
   const blockAlign = 2; // 1 channel * 16-bit
   const byteRate = sampleRate * blockAlign;
@@ -75,13 +75,7 @@ function generateWavBuffer(durationSec = 2, freq = 440, sampleRate = 44100) {
   buffer.write('data', 36);
   buffer.writeUInt32LE(dataSize, 40);
 
-  for (let i = 0; i < numSamples; i++) {
-    const t = i / sampleRate;
-    const sample = (Math.sin(2 * Math.PI * freq * t) * 0.4 + Math.sin(2 * Math.PI * freq * 2 * t) * 0.1);
-    const intSample = Math.max(-32768, Math.min(32767, Math.floor(sample * 32767)));
-    buffer.writeInt16LE(intSample, 44 + i * 2);
-  }
-
+  // Zero-value PCM = completely silent audio (zero piercing beeps)
   return buffer;
 }
 
@@ -106,7 +100,8 @@ async function getSyntheticAudioBuffer(quality = 'high') {
       '-hide_banner',
       '-loglevel', 'error',
       '-f', 'lavfi',
-      '-i', 'sine=frequency=440:duration=3'
+      '-i', 'anullsrc=r=44100:cl=mono',
+      '-t', '2'
     ];
 
     if (config.format === 'flac') {

@@ -1,10 +1,9 @@
 // sw.js - ISA Music PWA Service Worker
-const CACHE_NAME = 'isa-music-v1';
+const CACHE_NAME = 'isa-music-v2';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
   '/styles.css',
-  '/isa_music.js',
   '/manifest.json'
 ];
 
@@ -22,6 +21,7 @@ self.addEventListener('activate', (event) => {
       return Promise.all(
         keys.map((key) => {
           if (key !== CACHE_NAME) {
+            console.log('[SW] Deleting old cache:', key);
             return caches.delete(key);
           }
         })
@@ -33,30 +33,32 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  // Audio streams and API endpoints should bypass shell cache
-  if (url.pathname.startsWith('/api/')) {
+  // Audio streams, YouTube APIs, and backend endpoints bypass service worker
+  if (url.pathname.startsWith('/api/') || url.hostname.includes('youtube') || url.hostname.includes('googlevideo')) {
     return;
   }
 
-  // Cache-first strategy for static assets
+  // Network-first for JavaScript, HTML and root navigation to guarantee fresh code
+  if (url.pathname.endsWith('.js') || url.pathname.endsWith('.html') || url.pathname === '/' || event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request).then((networkResponse) => {
+        if (networkResponse && networkResponse.status === 200) {
+          const resClone = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, resClone));
+        }
+        return networkResponse;
+      }).catch(() => caches.match(event.request))
+    );
+    return;
+  }
+
+  // Cache-first for other static assets (css, icons, fonts)
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       if (cachedResponse) {
-        // Fetch fresh copy in background (stale-while-revalidate)
-        fetch(event.request).then((networkResponse) => {
-          if (networkResponse && networkResponse.status === 200) {
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, networkResponse));
-          }
-        }).catch(() => {});
         return cachedResponse;
       }
-
-      return fetch(event.request).catch(() => {
-        // If offline and navigating, return cached index.html
-        if (event.request.mode === 'navigate') {
-          return caches.match('/index.html');
-        }
-      });
+      return fetch(event.request);
     })
   );
 });
