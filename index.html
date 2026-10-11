@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="description" content="ISA Music - Modern Mobile-First Music Streaming with Lossless Audio & Real-time Search">
+    <meta name="theme-color" content="#fa2d56">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="ISA Music">
+    <link rel="manifest" href="/manifest.json">
+    <title>ISA Music</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body class="theme-dark">
+    <!-- App Layout Container -->
+    <div class="app-layout">
+        <!-- Desktop Sidebar Navigation -->
+        <aside class="sidebar" id="app-sidebar" aria-label="Main Navigation">
+            <div class="sidebar-header">
+                <div class="brand-logo">
+                    <div class="brand-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M9 18V5l12-2v13"></path>
+                            <circle cx="6" cy="18" r="3"></circle>
+                            <circle cx="18" cy="16" r="3"></circle>
+                        </svg>
+                    </div>
+                    <span class="brand-name">ISA Music</span>
+                </div>
+            </div>
+
+            <!-- Primary Navigation Links -->
+            <nav class="sidebar-nav" aria-label="Desktop Navigation">
+                <a href="#home" class="nav-link active" id="nav-home" data-view="home">
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                    <span>Home</span>
+                </a>
+                <a href="#search" class="nav-link" id="nav-search" data-view="search">
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <span>Search</span>
+                </a>
+                <a href="#library" class="nav-link" id="nav-library" data-view="library">
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"></path></svg>
+                    <span>Liked Library</span>
+                </a>
+                <a href="#offline" class="nav-link" id="nav-offline" data-view="offline">
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                    <span>Downloaded</span>
+                </a>
+            </nav>
+
+            <!-- Curated Playlists / Sections -->
+            <div class="sidebar-section">
+                <div class="section-title">PLAYLISTS</div>
+                <div class="playlist-links">
+                    <button type="button" class="playlist-btn" data-query="Synthwave chill beats">Synthwave Hits</button>
+                    <button type="button" class="playlist-btn" data-query="Acoustic morning chill">Acoustic Mornings</button>
+                    <button type="button" class="playlist-btn" data-query="Deep focus lofi study">Deep Focus Lo-Fi</button>
+                    <button type="button" class="playlist-btn" data-query="High energy workout dance">Workout Energy</button>
+                </div>
+            </div>
+
+            <!-- Settings & API Keys Section (Always visible on Desktop Sidebar) -->
+            <div class="sidebar-section" id="admin-section">
+                <div class="section-title">SETTINGS & API KEYS</div>
+                <button type="button" class="playlist-btn" id="btn-api-keys" data-view="settings">YouTube API Keys</button>
+                <button type="button" class="playlist-btn" id="btn-quota-stats" data-view="settings">Quota Stats</button>
+            </div>
+
+            <!-- YouTube Data API Quota Indicator Widget -->
+            <div class="sidebar-footer">
+                <div id="quota-indicator" class="quota-indicator quota-meter" aria-label="App-tracked YouTube daily search calls" title="Default search.list cap is 100 calls/day. This app tracks its own attempts only; other clients in the Google Cloud project are not included.">
+                    <div class="quota-header">
+                        <span class="quota-badge">SEARCHES</span>
+                        <span class="quota-text" id="quota-text">
+                            <span id="quota-used">0</span> / <span id="quota-total">100</span>
+                        </span>
+                    </div>
+                    <div class="quota-meter-bar">
+                        <div class="quota-meter-fill" id="quota-bar-fill" style="width: 0%;"></div>
+                    </div>
+                    <div class="quota-stats">
+                        <span id="quota-remaining-label"><span id="quota-remaining">100</span> searches remaining</span>
+                        <span id="quota-reset-text" class="quota-reset">Resets in India time</span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Viewport Area -->
+        <div class="main-wrapper">
+            <!-- Glassmorphic Top Bar / Search Header -->
+            <header class="top-bar" id="app-top-bar">
+                <!-- Mobile Brand Header -->
+                <div class="mobile-brand">
+                    <div class="brand-icon small">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
+                    </div>
+                    <span class="brand-title">ISA Music</span>
+                </div>
+
+                <!-- Search Box: queries run only after explicit submission -->
+                <div class="search-container" id="search-container">
+                    <div class="search-bar">
+                        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                        <input type="text" id="search-input" class="search-input" placeholder="Song or artist..." title="Type your full search, then press Enter or Search" autocomplete="off" spellcheck="false" aria-label="Search music">
+                        <button type="button" class="btn-clear-search" id="btn-clear-search" aria-label="Clear search" style="display: none;">&times;</button>
+                        <button type="button" id="btn-submit-search" class="btn-submit-search" aria-label="Search">Search</button>
+                    </div>
+
+                    <!-- Search results dropdown (opens only after submission) -->
+                    <div id="search-dropdown" class="search-dropdown search-results" role="listbox" aria-label="Search suggestions" style="display: none;">
+                        <!-- Dynamically populated search suggestion items -->
+                    </div>
+                </div>
+
+                <!-- Header Actions (Auth, Profile, Mobile Quota Toggle) -->
+                <div class="top-bar-actions">
+                    <div class="quota-pill" id="mobile-quota-pill" title="App-local estimate of remaining YouTube search.list calls (default limit: 100/day)">
+                        <span class="quota-dot"></span>
+                        <span id="quota-pill-text">100 left</span>
+                    </div>
+
+                    <div class="auth-control" id="auth-control">
+                        <button type="button" class="btn-auth" id="btn-open-auth">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="user-icon"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                            <span id="auth-btn-label">Sign In</span>
+                        </button>
+                        <div class="user-chip" id="user-chip" style="display: none;" role="button" tabindex="0" title="Click to open Profile, Quota & API Keys">
+                            <div class="user-avatar" id="user-avatar">U</div>
+                            <span class="user-email" id="user-email">user@example.com</span>
+                            <span class="user-chip-arrow">&#9662;</span>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Scrollable Content Container -->
+            <main class="main-content" id="main-content">
+                <!-- VIEW 1: HOME VIEW -->
+                <section class="view-section active" id="view-home">
+                    <!-- Hero / Featured Banner -->
+                    <div class="featured-hero">
+                        <div class="hero-badge">NEW RELEASE</div>
+                        <h2 class="hero-title">Experience Lossless Sound</h2>
+                        <p class="hero-subtitle">Real-time YouTube streaming with pristine FLAC fidelity and seamless crossfading.</p>
+                    </div>
+
+                    <!-- Curated Albums / Mixes Grid -->
+                    <!-- Curated Albums / Mixes Grid -->
+                    <section class="featured-section">
+                        <div class="section-header">
+                            <h3 class="section-heading">Featured Mixes</h3>
+                            <span class="section-subtext">Curated for today</span>
+                        </div>
+                        <div class="albums-grid">
+                            <div class="album-card" data-title="Liked Songs" data-view="library">
+                                <div class="album-cover bg-liked">
+                                    <div class="cover-glow"></div>
+                                    <div class="card-icon-overlay">
+                                        <svg viewBox="0 0 24 24" class="card-heart-icon" fill="white"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"></path></svg>
+                                    </div>
+                                    <button class="card-play-btn" aria-label="Open Liked Songs">&#9654;</button>
+                                </div>
+                                <h4 class="card-title">Liked Songs</h4>
+                                <p class="card-desc">Your Saved Favorites</p>
+                            </div>
+                            <div class="album-card" data-title="Punjabi Hits" data-query="Karan Aujla Shubh Sidhu Moose Wala Jaggi Punjabi hits">
+                                <div class="album-cover bg-punjabi">
+                                    <div class="cover-glow"></div>
+                                    <button class="card-play-btn" aria-label="Play Punjabi Hits">&#9654;</button>
+                                </div>
+                                <h4 class="card-title">Punjabi Hits</h4>
+                                <p class="card-desc">Karan Aujla, Shubh, Sidhu</p>
+                            </div>
+                            <div class="album-card" data-title="Hindi Romantic Hits" data-query="Hindi romantic new songs Anuv Jain Anirudh Arijit Singh">
+                                <div class="album-cover bg-romantic">
+                                    <div class="cover-glow"></div>
+                                    <button class="card-play-btn" aria-label="Play Hindi Romantic Hits">&#9654;</button>
+                                </div>
+                                <h4 class="card-title">Hindi Romantic Hits</h4>
+                                <p class="card-desc">Anuv Jain, Anirudh & New Hits</p>
+                            </div>
+                            <div class="album-card" data-title="Workout Phonk" data-query="Workout phonk montagem zora automotivo pedagora">
+                                <div class="album-cover bg-workout">
+                                    <div class="cover-glow"></div>
+                                    <button class="card-play-btn" aria-label="Play Workout Phonk">&#9654;</button>
+                                </div>
+                                <h4 class="card-title">Workout Phonk</h4>
+                                <p class="card-desc">Montagem Zora, Pedagora & Bass</p>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Recently Played Tracks -->
+                    <section class="songs-section">
+                        <div class="section-header">
+                            <h3 class="section-heading" id="home-section-title">Recently Played</h3>
+                            <span class="section-subtext" id="home-section-subtext">Your last 5 played tracks</span>
+                        </div>
+                        <div class="song-list" id="home-song-list">
+                            <div class="song-header">
+                                <span class="col-play">#</span>
+                                <span class="col-title">TITLE</span>
+                                <span class="col-artist">ARTIST</span>
+                                <span class="col-actions"></span>
+                            </div>
+                            <!-- 5 Recent Song Items -->
+                            <div class="song-item" data-video-id="dQw4w9WgXcQ" data-title="Never Gonna Give You Up" data-artist="Rick Astley" data-thumbnail="https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg">
+                                <span class="col-play btn-play">&#9654;</span>
+                                <div class="col-title-group">
+                                    <span class="col-title">Never Gonna Give You Up</span>
+                                    <span class="col-artist mobile-only">Rick Astley</span>
+                                </div>
+                                <span class="col-artist desktop-only">Rick Astley</span>
+                                <div class="col-actions">
+                                    <button type="button" class="btn-download-track" data-video-id="dQw4w9WgXcQ" aria-label="Download song" title="Download for offline playback">
+                                        <svg viewBox="0 0 24 24" class="download-icon" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                                    </button>
+                                    <button type="button" class="btn-like-track" data-video-id="dQw4w9WgXcQ" aria-label="Like song">
+                                        <svg viewBox="0 0 24 24" class="heart-icon"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"></path></svg>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="song-item" data-video-id="9bZkp7q19f0" data-title="Gangnam Style" data-artist="PSY" data-thumbnail="https://i.ytimg.com/vi/9bZkp7q19f0/hqdefault.jpg">
+                                <span class="col-play btn-play">&#9654;</span>
+                                <div class="col-title-group">
+                                    <span class="col-title">Gangnam Style</span>
+                                    <span class="col-artist mobile-only">PSY</span>
+                                </div>
+                                <span class="col-artist desktop-only">PSY</span>
+                                <div class="col-actions">
+                                    <button type="button" class="btn-download-track" data-video-id="9bZkp7q19f0" aria-label="Download song" title="Download for offline playback">
+                                        <svg viewBox="0 0 24 24" class="download-icon" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                                    </button>
+                                    <button type="button" class="btn-like-track" data-video-id="9bZkp7q19f0" aria-label="Like song">
+                                        <svg viewBox="0 0 24 24" class="heart-icon"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"></path></svg>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="song-item" data-video-id="vsWxs1tuwDk" data-title="Winning Speech" data-artist="Karan Aujla" data-thumbnail="https://i.ytimg.com/vi/vsWxs1tuwDk/hqdefault.jpg">
+                                <span class="col-play btn-play">&#9654;</span>
+                                <div class="col-title-group">
+                                    <span class="col-title">Winning Speech</span>
+                                    <span class="col-artist mobile-only">Karan Aujla</span>
+                                </div>
+                                <span class="col-artist desktop-only">Karan Aujla</span>
+                                <div class="col-actions">
+                                    <button type="button" class="btn-download-track" data-video-id="vsWxs1tuwDk" aria-label="Download song" title="Download for offline playback">
+                                        <svg viewBox="0 0 24 24" class="download-icon" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                                    </button>
+                                    <button type="button" class="btn-like-track" data-video-id="vsWxs1tuwDk" aria-label="Like song">
+                                        <svg viewBox="0 0 24 24" class="heart-icon"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"></path></svg>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="song-item" data-video-id="4tywp83zkmk" data-title="Cheques" data-artist="Shubh" data-thumbnail="https://i.ytimg.com/vi/4tywp83zkmk/hqdefault.jpg">
+                                <span class="col-play btn-play">&#9654;</span>
+                                <div class="col-title-group">
+                                    <span class="col-title">Cheques</span>
+                                    <span class="col-artist mobile-only">Shubh</span>
+                                </div>
+                                <span class="col-artist desktop-only">Shubh</span>
+                                <div class="col-actions">
+                                    <button type="button" class="btn-download-track" data-video-id="4tywp83zkmk" aria-label="Download song" title="Download for offline playback">
+                                        <svg viewBox="0 0 24 24" class="download-icon" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                                    </button>
+                                    <button type="button" class="btn-like-track" data-video-id="4tywp83zkmk" aria-label="Like song">
+                                        <svg viewBox="0 0 24 24" class="heart-icon"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"></path></svg>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="song-item" data-video-id="gSh1oB3U1n4" data-title="Husn" data-artist="Anuv Jain" data-thumbnail="https://i.ytimg.com/vi/gSh1oB3U1n4/hqdefault.jpg">
+                                <span class="col-play btn-play">&#9654;</span>
+                                <div class="col-title-group">
+                                    <span class="col-title">Husn</span>
+                                    <span class="col-artist mobile-only">Anuv Jain</span>
+                                </div>
+                                <span class="col-artist desktop-only">Anuv Jain</span>
+                                <div class="col-actions">
+                                    <button type="button" class="btn-download-track" data-video-id="gSh1oB3U1n4" aria-label="Download song" title="Download for offline playback">
+                                        <svg viewBox="0 0 24 24" class="download-icon" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                                    </button>
+                                    <button type="button" class="btn-like-track" data-video-id="gSh1oB3U1n4" aria-label="Like song">
+                                        <svg viewBox="0 0 24 24" class="heart-icon"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"></path></svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                </section>
+
+                <!-- VIEW 2: SEARCH RESULTS VIEW (Expanded View) -->
+                <section class="view-section" id="view-search" style="display: none;">
+                    <div id="search-status-banner" class="search-status-banner" role="status" aria-live="polite" hidden>
+                        <span id="search-status-spinner" class="search-spinner" aria-hidden="true" hidden></span>
+                        <div class="search-status-copy">
+                            <strong id="search-status-title">Searching YouTube</strong>
+                            <span id="search-status-detail">Checking the YouTube search API.</span>
+                            <span id="search-status-countdown" aria-live="off"></span>
+                        </div>
+                        <button type="button" id="search-status-retry" hidden disabled>Retry search</button>
+                    </div>
+                    <div class="section-header">
+                        <h3 class="section-heading" id="search-view-title">Search Results</h3>
+                        <span class="section-subtext" id="search-view-subtitle">Enter a query above</span>
+                    </div>
+                    <div class="song-list" id="search-view-song-list">
+                        <!-- Populated by search queries -->
+                    </div>
+                </section>
+
+                <!-- VIEW 3: LIKED LIBRARY VIEW -->
+                <section class="view-section" id="view-library" style="display: none;">
+                    <div class="library-header">
+                        <div class="library-icon-box">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="big-heart"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"></path></svg>
+                        </div>
+                        <div class="library-info">
+                            <span class="library-subtitle">PLAYLIST</span>
+                            <h2 class="library-title">Liked Songs</h2>
+                            <p class="library-meta"><span id="liked-count">0</span> tracks saved &bull; Synced to your account</p>
+                        </div>
+                    </div>
+
+                    <div class="library-toolbar">
+                        <button type="button" class="btn-primary-play" id="btn-play-all-liked">
+                            <span class="play-icon">&#9654;</span>
+                            <span>Play All</span>
+                        </button>
+                        <span class="library-status" id="library-sync-status">Sign in to save your likes</span>
+                    </div>
+
+                    <div class="song-list" id="library-song-list">
+                        <div class="empty-state" id="library-empty-state">
+                            <div class="empty-icon">&#128156;</div>
+                            <h4>No liked songs yet</h4>
+                            <p>Songs you like will appear here. Tap the heart icon while listening to add tracks.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- VIEW 4: OFFLINE VIEW (Active when offline or selected) -->
+                <section class="view-section" id="view-offline" style="display: none;">
+                    <div class="offline-banner">
+                        <div class="offline-icon-box">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="offline-cloud-icon"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"></path><path d="m2 2 20 20"></path></svg>
+                        </div>
+                        <div class="offline-banner-text">
+                            <h3>Offline Player</h3>
+                            <p id="offline-status-text">Downloaded songs stored on your device play without internet.</p>
+                        </div>
+                    </div>
+
+                    <div class="section-header">
+                        <h3 class="section-heading">Downloaded Songs</h3>
+                        <span class="section-subtext"><span id="offline-count">0</span> tracks ready for offline playback</span>
+                    </div>
+
+                    <div class="song-list" id="offline-song-list">
+                        <div class="empty-state" id="offline-empty-state">
+                            <div class="empty-icon">&#128229;</div>
+                            <h4>No downloaded songs yet</h4>
+                            <p>Tap the download button (⬇) on any track while online to play it offline anywhere!</p>
+                        </div>
+                    </div>
+                </section>
+            </main>
+
+            <!-- Mobile Bottom Navigation Bar (Apple Music Style) -->
+            <nav class="mobile-nav" id="mobile-nav" aria-label="Mobile Navigation">
+                <button type="button" class="mobile-nav-item active" id="mobile-nav-home" data-view="home">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                    <span>Home</span>
+                </button>
+                <button type="button" class="mobile-nav-item" id="mobile-nav-search" data-view="search">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <span>Search</span>
+                </button>
+                <button type="button" class="mobile-nav-item" id="mobile-nav-library" data-view="library">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"></path></svg>
+                    <span>Library</span>
+                </button>
+                <button type="button" class="mobile-nav-item" id="mobile-nav-offline" data-view="offline">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                    <span>Offline</span>
+                </button>
+                <button type="button" class="mobile-nav-item" id="mobile-nav-auth" data-action="auth">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                    <span>Account</span>
+                </button>
+            </nav>
+        </div>
+    </div>
+
+    <!-- SLIM BOTTOM MINI-PLAYER (Sticky Glassmorphic Bar) -->
+    <div id="mini-player" class="mini-player player-bar" role="region" aria-label="Mini Player">
+        <!-- Progress Bar Row: Start time at start, bar in middle, End time at end -->
+        <div class="mini-progress-row" id="mini-progress-row">
+            <span class="mini-time mini-time-start" id="mini-time-start">0:00</span>
+            <div class="mini-progress-track" id="mini-progress-track">
+                <div class="mini-progress-fill" id="mini-progress-fill"></div>
+            </div>
+            <span class="mini-time mini-time-end" id="mini-time-end">0:00</span>
+        </div>
+
+        <div class="mini-player-content">
+            <!-- Left: Artwork & Song Meta -->
+            <div class="now-playing" id="mini-now-playing">
+                <div class="np-cover" id="mini-np-cover" style="background-color: #282828;"></div>
+                <div class="np-info">
+                    <div class="np-title" id="np-title">No song playing</div>
+                    <div class="np-artist" id="np-artist">---</div>
+                </div>
+            </div>
+
+            <!-- Center: Player Controls Container -->
+            <div class="player-controls" id="player-controls">
+                <div class="control-buttons">
+                    <button type="button" class="btn-prev" id="mini-btn-prev" aria-label="Previous track">&#9198;</button>
+                    <button type="button" class="btn-play-pause" id="main-play-pause" aria-label="Play or pause">&#9654;</button>
+                    <button type="button" class="btn-next" id="mini-btn-next" aria-label="Next track">&#9197;</button>
+                </div>
+
+                <!-- Desktop Progress Bar -->
+                <div class="progress-container desktop-only" id="mini-progress-container">
+                    <span class="time-current" id="time-current">0:00</span>
+                    <div class="progress-bar" id="progress-bar">
+                        <div class="progress" id="progress-fill"></div>
+                    </div>
+                    <span class="time-total" id="time-total">0:00</span>
+                </div>
+            </div>
+
+            <!-- Right: Mini-Player Actions (Like, Download, Volume, Expand Sheet) -->
+            <div class="mini-actions">
+                <button type="button" class="btn-download" id="mini-btn-download" aria-label="Download track" title="Download for offline playback">
+                    <svg viewBox="0 0 24 24" class="download-icon" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                </button>
+                <button type="button" class="btn-like" id="mini-like-btn" aria-label="Like track">
+                    <svg viewBox="0 0 24 24" class="heart-icon"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"></path></svg>
+                </button>
+
+                <!-- Desktop Volume Control -->
+                <div class="player-volume desktop-only">
+                    <button type="button" class="btn-volume-icon" id="btn-volume-toggle" aria-label="Mute or unmute">&#128266;</button>
+                    <div class="volume-bar" id="volume-bar">
+                        <div class="volume-progress" id="volume-progress" style="width: 80%;"></div>
+                    </div>
+                </div>
+
+                <!-- Expand Button to open Full-Screen Sheet -->
+                <button type="button" class="btn-expand" id="btn-expand-player" aria-label="Expand player window">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"></polyline></svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- FULL-SCREEN EXPANDABLE PLAYER SHEET / MODAL -->
+    <section id="expandable-player" class="expandable-player" data-player="expandable" aria-label="Expanded Music Player" aria-hidden="true">
+        <!-- Ambient Blur Background Layer -->
+        <div class="expanded-backdrop-glow" id="expanded-backdrop-glow"></div>
+
+        <div class="expanded-player-sheet">
+            <!-- Sheet Header / Collapse Handle -->
+            <div class="expanded-header">
+                <button type="button" class="btn-collapse" id="btn-collapse-player" aria-label="Collapse player window">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </button>
+                <div class="expanded-header-title">
+                    <span class="header-pill">NOW PLAYING</span>
+                </div>
+                <div class="expanded-header-spacer"></div>
+            </div>
+
+            <!-- Large Artwork Display -->
+            <div class="expanded-artwork-container">
+                <div class="expanded-artwork-shadow" id="expanded-artwork-shadow"></div>
+                <div class="expanded-artwork" id="expanded-artwork" style="background-color: #282828;"></div>
+            </div>
+
+            <!-- Song Metadata & Heart / Download Buttons -->
+            <div class="expanded-meta-row">
+                <div class="expanded-meta-text">
+                    <h3 class="expanded-title" id="expanded-title">No song playing</h3>
+                    <p class="expanded-artist" id="expanded-artist">Select a track to start</p>
+                </div>
+                <div class="expanded-actions-group">
+                    <button type="button" class="btn-download-expanded" id="expanded-btn-download" aria-label="Download track" title="Download for offline playback">
+                        <svg viewBox="0 0 24 24" class="download-icon" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                    </button>
+                    <button type="button" class="btn-like-expanded" id="expanded-like-btn" aria-label="Like track">
+                        <svg viewBox="0 0 24 24" class="heart-icon"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"></path></svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Progress Scrubber -->
+            <div class="expanded-scrubber-box">
+                <div class="expanded-scrubber-track" id="expanded-scrubber">
+                    <div class="expanded-scrubber-fill" id="expanded-scrubber-fill" style="width: 0%;"></div>
+                    <div class="expanded-scrubber-thumb" id="expanded-scrubber-thumb" style="left: 0%;"></div>
+                </div>
+                <div class="expanded-time-row">
+                    <span id="expanded-time-current">0:00</span>
+                    <span id="expanded-time-total">0:00</span>
+                </div>
+            </div>
+
+            <!-- Primary Transport Controls -->
+            <div class="expanded-controls">
+                <button type="button" class="btn-transport" id="expanded-btn-prev" aria-label="Previous track">&#9198;</button>
+                <button type="button" class="btn-transport-play" id="expanded-play-pause" aria-label="Play or pause">&#9654;</button>
+                <button type="button" class="btn-transport" id="expanded-btn-next" aria-label="Next track">&#9197;</button>
+            </div>
+
+            <!-- Expanded Volume Slider -->
+            <div class="expanded-volume-row">
+                <span class="vol-icon">&#128265;</span>
+                <input type="range" class="volume-slider" id="expanded-volume-slider" min="0" max="100" value="80" aria-label="Volume">
+                <span class="vol-icon">&#128266;</span>
+            </div>
+
+            <!-- Audio Settings Card: Quality Toggles & Crossfade Slider -->
+            <div class="audio-settings-card">
+                <!-- Quality Selector Toggles -->
+                <div class="setting-group">
+                    <div class="setting-header">
+                        <span class="setting-label">AUDIO STREAM QUALITY</span>
+                        <span class="quality-badge" id="current-quality-badge">320kbps</span>
+                    </div>
+                    <div id="quality-selector" class="quality-selector quality-toggles" data-quality-container>
+                        <button type="button" class="quality-btn active" data-quality="high">High</button>
+                        <button type="button" class="quality-btn" data-quality="medium">Medium</button>
+                        <button type="button" class="quality-btn" data-quality="low">Low</button>
+                        <button type="button" class="quality-btn" data-quality="flac">FLAC</button>
+                    </div>
+                </div>
+
+                <!-- Web Audio API Crossfade Duration Control -->
+                <div class="setting-group">
+                    <div class="setting-header">
+                        <span class="setting-label">CROSSFADE DURATION</span>
+                        <span class="crossfade-value" id="crossfade-value-label">3.0s</span>
+                    </div>
+                    <div class="crossfade-slider-container">
+                        <input type="range" id="crossfade-slider" name="crossfade" class="crossfade-slider" data-control="crossfade" min="0" max="12" step="0.5" value="3" aria-label="Crossfade Duration (seconds)">
+                    </div>
+                    <div class="setting-hints">
+                        <span>0s (Off)</span>
+                        <span>Smooth Transition</span>
+                        <span>12s (Max)</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- AUTHENTICATION MODAL (Login & Register) -->
+    <div class="auth-modal-overlay" id="auth-modal" style="display: none;" aria-hidden="true" role="dialog" aria-modal="true">
+        <div class="auth-modal-card">
+            <button type="button" class="btn-close-modal" id="btn-close-auth" aria-label="Close authentication modal">&times;</button>
+            <div class="auth-modal-header">
+                <div class="brand-icon small">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
+                </div>
+                <h3 class="auth-modal-title">Welcome to ISA Music</h3>
+                <p class="auth-modal-subtitle">Sign in to save liked songs and personalize your audio experience.</p>
+            </div>
+
+            <!-- Tab Switcher -->
+            <div class="auth-tabs">
+                <button type="button" class="auth-tab-btn active" id="tab-login">Sign In</button>
+                <button type="button" class="auth-tab-btn" id="tab-register">Create Account</button>
+            </div>
+
+            <!-- Login Form -->
+            <form id="login-form" class="auth-form" novalidate>
+                <div class="form-group">
+                    <label for="login-email">Email Address</label>
+                    <input type="email" id="login-email" class="form-input" placeholder="name@example.com" required autocomplete="email">
+                </div>
+                <div class="form-group">
+                    <label for="login-password">Password</label>
+                    <input type="password" id="login-password" class="form-input" placeholder="••••••••" required autocomplete="current-password">
+                </div>
+                <div class="form-error" id="login-error" style="display: none;"></div>
+                <button type="submit" class="btn-submit-auth" id="btn-login-submit">Sign In</button>
+            </form>
+
+            <!-- Register Form -->
+            <form id="register-form" class="auth-form" style="display: none;" novalidate>
+                <div class="form-group">
+                    <label for="register-email">Email Address</label>
+                    <input type="email" id="register-email" class="form-input" placeholder="name@example.com" required autocomplete="email">
+                </div>
+                <div class="form-group">
+                    <label for="register-password">Password (minimum 6 characters)</label>
+                    <input type="password" id="register-password" class="form-input" placeholder="••••••••" required autocomplete="new-password">
+                </div>
+                <div class="form-error" id="register-error" style="display: none;"></div>
+                <button type="submit" class="btn-submit-auth" id="btn-register-submit">Create Account</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- SETTINGS / ADMIN MODAL (API Keys Management) -->
+    <div class="auth-modal-overlay" id="settings-modal" style="display: none;" aria-hidden="true" role="dialog" aria-modal="true">
+        <div class="auth-modal-card" style="max-width: 600px;">
+            <button type="button" class="btn-close-modal" id="btn-close-settings" aria-label="Close settings modal">&times;</button>
+            <div class="auth-modal-header">
+                <div class="brand-icon small">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
+                </div>
+                <h3 class="auth-modal-title">Settings</h3>
+                <p class="auth-modal-subtitle">Manage YouTube API keys and view quota statistics.</p>
+            </div>
+
+            <!-- Settings & Profile Tabs -->
+            <div class="auth-tabs" id="settings-tabs">
+                <button type="button" class="auth-tab-btn active" id="tab-profile" data-tab="profile">Profile & Quota</button>
+                <button type="button" class="auth-tab-btn" id="tab-api-keys" data-tab="api-keys">API Keys</button>
+                <button type="button" class="auth-tab-btn" id="tab-quota-stats" data-tab="quota-stats">Quota Stats</button>
+            </div>
+
+            <!-- Tab 1: Profile & Quota Tab (Default) -->
+            <div class="settings-tab-content active" id="tab-content-profile">
+                <!-- User Profile Info Card -->
+                <div class="modal-profile-card">
+                    <div class="modal-profile-avatar" id="modal-profile-avatar">U</div>
+                    <div class="modal-profile-info">
+                        <h4 class="modal-profile-email" id="modal-profile-email">Not Signed In</h4>
+                        <span class="modal-profile-badge" id="modal-profile-badge">Guest Session</span>
+                    </div>
+                    <div class="modal-profile-actions">
+                        <button type="button" class="btn-modal-logout" id="btn-modal-logout">Sign Out</button>
+                        <button type="button" class="btn-modal-login" id="btn-modal-login" style="display: none;">Sign In</button>
+                    </div>
+                </div>
+
+                <!-- Real-time Quota Status Card (Mobile & Desktop) -->
+                <div class="settings-section">
+                    <h4 class="settings-subtitle">YouTube API Quota</h4>
+                    <div class="modal-quota-card">
+                        <div class="modal-quota-header">
+                            <div>
+                                <span class="modal-quota-tag">DAILY SEARCH LIMIT</span>
+                                <strong class="modal-quota-remaining-val" id="modal-quota-remaining">100 searches left</strong>
+                            </div>
+                            <span class="modal-quota-key-pill" id="modal-quota-key">Key 1/1</span>
+                        </div>
+                        <div class="modal-quota-meter">
+                            <div class="modal-quota-meter-fill" id="modal-quota-fill" style="width: 0%;"></div>
+                        </div>
+                        <div class="modal-quota-footer">
+                            <span id="modal-quota-used-text">0 / 100 used today</span>
+                            <span id="modal-quota-reset-text">Resets in India time</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Navigation to Keys / Stats -->
+                <div class="modal-profile-shortcuts">
+                    <button type="button" class="profile-shortcut-btn" id="btn-quick-api-keys">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-2-2l2 2m-4 4l-4 4-2-2-4 4 2 2-4 4 2 2 4-4 2 2 4-4-2-2 4-4z"></path></svg>
+                        <span>Manage YouTube API Keys</span>
+                    </button>
+                    <button type="button" class="profile-shortcut-btn" id="btn-quick-quota-stats">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10"></path><path d="M12 20V4"></path><path d="M6 20v-6"></path></svg>
+                        <span>View Key Quota Breakdown</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tab 2: API Keys Tab -->
+            <div class="settings-tab-content" id="tab-content-api-keys">
+                <div class="settings-section">
+                    <h4 class="settings-subtitle">YouTube Data API Keys</h4>
+                    <p class="settings-desc">Add up to 10 API keys for automatic failover. Keys are stored server-side only.</p>
+                    
+                    <!-- Current Keys List -->
+                    <div class="api-keys-list" id="api-keys-list">
+                        <div class="api-key-item loading">
+                            <div class="key-loading">Loading...</div>
+                        </div>
+                    </div>
+
+                    <!-- Add Key Form -->
+                    <form id="add-key-form" class="api-key-form">
+                        <div class="form-group">
+                            <label for="new-api-key">Add New API Key</label>
+                            <div class="input-with-btn">
+                                <input type="password" id="new-api-key" class="form-input" placeholder="AIzaSy..." required autocomplete="off">
+                                <button type="submit" class="btn-submit-auth">Add Key</button>
+                            </div>
+                            <small class="form-hint">Format: AIza followed by 35 characters. Key restrictions: YouTube Data API v3 enabled, referrer/IP restrictions matching this server.</small>
+                        </div>
+                    </form>
+
+                    <!-- Quick Add Multiple -->
+                    <div class="settings-section">
+                        <h4 class="settings-subtitle">Bulk Import</h4>
+                        <p class="settings-desc">Paste multiple keys (one per line or comma-separated):</p>
+                        <div class="form-group">
+                            <textarea id="bulk-keys-input" class="form-input" rows="4" placeholder="AIzaKey1
+AIzaKey2
+AIzaKey3"></textarea>
+                            <button type="button" class="btn-submit-auth" id="btn-bulk-import" style="margin-top: 8px;">Import Keys</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quota Stats Tab -->
+            <div class="settings-tab-content" id="tab-content-quota-stats">
+                <div class="settings-section">
+                    <h4 class="settings-subtitle">API Key Usage Statistics</h4>
+                    <div class="quota-stats-table" id="quota-stats-table">
+                        <div class="key-loading">Loading...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden Audio Streaming Pipeline Containers -->
+    <div id="youtube-player" style="position: absolute; left: -9999px; width: 0; height: 0; border: none;"></div>
+    <audio id="audio-pipeline-a" preload="auto" style="display: none;"></audio>
+    <audio id="audio-pipeline-b" preload="auto" style="display: none;"></audio>
+
+    <!-- Client Scripts -->
+    <script src="https://www.youtube.com/iframe_api"></script>
+    <script src="isa_music.js"></script>
+</body>
+</html>
