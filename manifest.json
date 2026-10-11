@@ -5,6 +5,7 @@
   "start_url": "/index.html",
   "display": "standalone",
   "orientation": "portrait-primary",
+  "categories": ["music", "audio", "entertainment"],
   "background_color": "#0a0a0e",
   "theme_color": "#fa2d56",
   "icons": [

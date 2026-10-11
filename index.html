@@ -475,7 +475,9 @@
                 <div class="expanded-header-title">
                     <span class="header-pill">NOW PLAYING</span>
                 </div>
-                <div class="expanded-header-spacer"></div>
+                <button type="button" class="btn-pip" id="btn-pip" aria-label="Picture-in-Picture Floating Player" title="Floating Player (PiP)">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="pip-icon"><rect x="2" y="3" width="20" height="14" rx="2"></rect><rect x="11" y="9" width="9" height="6" rx="1" fill="currentColor"></rect></svg>
+                </button>
             </div>
 
             <!-- Large Artwork Display -->
@@ -734,9 +736,10 @@ AIzaKey3"></textarea>
     </div>
     <audio id="audio-pipeline-a" preload="auto" style="display: none;"></audio>
     <audio id="audio-pipeline-b" preload="auto" style="display: none;"></audio>
+    <audio id="bg-audio-tether" loop preload="auto" style="display: none;"></audio>
 
     <!-- Client Scripts -->
     <script src="https://www.youtube.com/iframe_api"></script>
-    <script src="isa_music.js?v=2.1.0"></script>
+    <script src="isa_music.js?v=2.2.0"></script>
 </body>
 </html>

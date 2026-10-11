@@ -1264,7 +1264,8 @@ input {
 }
 
 .btn-collapse,
-.btn-minimize {
+.btn-minimize,
+.btn-pip {
     width: 36px;
     height: 36px;
     border-radius: 50%;
@@ -1273,10 +1274,21 @@ input {
     align-items: center;
     justify-content: center;
     color: var(--text-secondary);
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.btn-collapse:hover,
+.btn-minimize:hover,
+.btn-pip:hover {
+    background: rgba(255, 255, 255, 0.16);
+    color: #fff;
+    transform: scale(1.05);
 }
 
 .btn-collapse svg,
-.btn-minimize svg {
+.btn-minimize svg,
+.btn-pip svg {
     width: 20px;
     height: 20px;
 }

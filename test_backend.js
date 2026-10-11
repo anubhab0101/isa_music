@@ -168,15 +168,39 @@ async function startServer() {
     app.get('/api/search', (req, res) => {
       const q = req.query.q;
       if (!q || !q.trim()) return res.status(400).json({ error: 'Query q required' });
+      const norm = q.trim().toLowerCase();
+      try {
+        const cached = db.prepare('SELECT results_json FROM search_cache WHERE query = ?').get(norm);
+        if (cached && cached.results_json) {
+          return res.json(JSON.parse(cached.results_json));
+        }
+      } catch (_) {}
+
       mockQuotaUsed += 100;
-      res.json({
+      const results = {
         items: [{
           videoId: KNOWN_VALID_VIDEO_ID,
           title: `${q} Song`,
           artist: 'Test Artist',
           thumbnail: 'https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg'
         }]
-      });
+      };
+
+      try {
+        db.prepare('INSERT OR REPLACE INTO search_cache (query, results_json, expires_at) VALUES (?, ?, ?)').run(
+          norm,
+          JSON.stringify(results),
+          Date.now() + 86400000
+        );
+        const today = new Date().toISOString().slice(0, 10);
+        db.prepare(`
+          INSERT INTO api_quota (date, units_used, units_limit, search_count, stream_count, reset_at)
+          VALUES (?, ?, 10000, 1, 0, ?)
+          ON CONFLICT(id) DO UPDATE SET units_used = ?, search_count = search_count + 1
+        `).run(today, mockQuotaUsed, new Date(Date.now() + 86400000).toISOString(), mockQuotaUsed);
+      } catch (_) {}
+
+      res.json(results);
     });
 
     app.get('/api/stream/:videoId', (req, res) => {
