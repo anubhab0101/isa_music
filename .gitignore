@@ -31,3 +31,13 @@ Thumbs.db
 .agents/
 .manus/
 .work/
+
+# Android & Capacitor build artifacts
+android/.gradle/
+android/build/
+android/app/build/
+android/app/src/main/assets/public/
+www/
+yt-dlp
+yt-dlp.exe
+

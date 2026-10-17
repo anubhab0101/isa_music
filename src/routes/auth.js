@@ -36,7 +36,7 @@ const handleRegister = async (req, res) => {
     const db = getDb();
 
     // Check if email already registered (SQLite COLLATE NOCASE handles case-insensitivity)
-    const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(cleanEmail);
+    const existing = await db.prepare('SELECT id FROM users WHERE email = ?').get(cleanEmail);
     if (existing) {
       return res.status(409).json({ error: 'Email is already registered' });
     }
@@ -46,7 +46,7 @@ const handleRegister = async (req, res) => {
 
     // Insert user
     const insertStmt = db.prepare('INSERT INTO users (email, password_hash) VALUES (?, ?)');
-    const result = insertStmt.run(cleanEmail, passwordHash);
+    const result = await insertStmt.run(cleanEmail, passwordHash);
     const userId = Number(result.lastInsertRowid);
 
     // Generate JWT token
@@ -89,7 +89,7 @@ const handleLogin = async (req, res) => {
     }
 
     const db = getDb();
-    const user = db.prepare('SELECT id, email, password_hash FROM users WHERE email = ?').get(cleanEmail);
+    const user = await db.prepare('SELECT id, email, password_hash FROM users WHERE email = ?').get(cleanEmail);
 
     if (!user) {
       return res.status(401).json({ error: 'Invalid email or password' });
@@ -122,12 +122,28 @@ const handleLogin = async (req, res) => {
 };
 
 // Handler for user profile verification
-const handleMe = (req, res) => {
+const handleMe = async (req, res) => {
   try {
     const db = getDb();
-    const user = db.prepare('SELECT id, email, created_at FROM users WHERE id = ?').get(req.user.id);
+    let user = null;
+    try {
+      user = await db.prepare('SELECT id, email, created_at FROM users WHERE id = ?').get(req.user.id);
+    } catch (e) {
+      console.warn('[handleMe DB query warning]:', e.message);
+    }
 
     if (!user) {
+      // Graceful fallback: If token is cryptographically verified by authMiddleware,
+      // return token user info so temporary server restarts don't auto-logout the user!
+      if (req.user && req.user.email) {
+        return res.status(200).json({
+          success: true,
+          user: {
+            id: Number(req.user.id),
+            email: req.user.email
+          }
+        });
+      }
       return res.status(401).json({ error: 'User no longer exists' });
     }
 

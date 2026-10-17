@@ -356,9 +356,12 @@
                         </div>
                     </div>
 
-                    <div class="section-header">
-                        <h3 class="section-heading">Downloaded Songs</h3>
-                        <span class="section-subtext"><span id="offline-count">0</span> tracks ready for offline playback</span>
+                    <div class="section-header" style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <h3 class="section-heading">Downloaded Songs</h3>
+                            <span class="section-subtext"><span id="offline-count">0</span> tracks ready for offline playback</span>
+                        </div>
+                        <button type="button" class="btn-clear-offline" id="btn-clear-offline" title="Clear all downloaded songs from device">Clear Offline Storage</button>
                     </div>
 
                     <div class="song-list" id="offline-song-list">
@@ -626,6 +629,7 @@
             <!-- Settings & Profile Tabs -->
             <div class="auth-tabs" id="settings-tabs">
                 <button type="button" class="auth-tab-btn active" id="tab-profile" data-tab="profile">Profile & Quota</button>
+                <button type="button" class="auth-tab-btn" id="tab-playback" data-tab="playback">Playback</button>
                 <button type="button" class="auth-tab-btn" id="tab-api-keys" data-tab="api-keys">API Keys</button>
                 <button type="button" class="auth-tab-btn" id="tab-quota-stats" data-tab="quota-stats">Quota Stats</button>
             </div>
@@ -679,7 +683,73 @@
                 </div>
             </div>
 
-            <!-- Tab 2: API Keys Tab -->
+            <!-- Tab 2: Playback Settings Tab -->
+            <div class="settings-tab-content" id="tab-content-playback">
+                <div class="settings-section">
+                    <h4 class="settings-subtitle">Background Playback</h4>
+                    <p class="settings-desc">Keep music playing when screen is off or app is in background.</p>
+                    
+                    <div class="settings-toggle-row">
+                        <div class="toggle-info">
+                            <strong>Screen Wake Lock</strong>
+                            <small>Prevents screen from turning off during playback. Keeps audio alive when screen is off.</small>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="toggle-wake-lock" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    
+                    <div class="settings-toggle-row">
+                        <div class="toggle-info">
+                            <strong>Background Audio Tether</strong>
+                            <small>Uses silent audio loop to keep audio hardware active in background/pocket mode.</small>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="toggle-bg-tether" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    
+                    <div class="settings-toggle-row">
+                        <div class="toggle-info">
+                            <strong>Auto-resume on Wake</strong>
+                            <small>Automatically resumes playback when returning to the app or unlocking screen.</small>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="toggle-auto-resume" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="settings-section">
+                    <h4 class="settings-subtitle">Crossfade & Audio</h4>
+                    <p class="settings-desc">Seamless transitions between tracks.</p>
+                    
+                    <div class="settings-slider-row">
+                        <div class="slider-info">
+                            <strong>Crossfade Duration</strong>
+                            <span id="crossfade-value-display">3.0s</span>
+                        </div>
+                        <input type="range" id="crossfade-duration-slider" min="0" max="10" step="0.5" value="3">
+                    </div>
+                    
+                    <div class="settings-dropdown-row">
+                        <div class="dropdown-info">
+                            <strong>Crossfade Curve</strong>
+                            <small>Equal-power for natural transitions, linear for precise mixing</small>
+                        </div>
+                        <select id="crossfade-curve-select" class="form-select">
+                            <option value="equal-power">Equal Power (Default)</option>
+                            <option value="linear">Linear</option>
+                            <option value="exponential">Exponential</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 3: API Keys Tab -->
             <div class="settings-tab-content" id="tab-content-api-keys">
                 <div class="settings-section">
                     <h4 class="settings-subtitle">YouTube Data API Keys</h4>

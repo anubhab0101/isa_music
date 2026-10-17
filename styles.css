@@ -3018,4 +3018,23 @@ input {
     transform: scale(1.15);
 }
 
+.btn-clear-offline {
+    background: rgba(255, 69, 58, 0.12);
+    color: #ff453a;
+    border: 1px solid rgba(255, 69, 58, 0.25);
+    padding: 6px 14px;
+    border-radius: 16px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-clear-offline:hover {
+    background: rgba(255, 69, 58, 0.25);
+    color: #fff;
+    border-color: #ff453a;
+    transform: translateY(-1px);
+}
+
 

@@ -1,6 +1,8 @@
 // src/services/audio.js - YouTube Audio Extraction, FFmpeg Transcoding & Fallback Engine
 const { spawn } = require('child_process');
 const { Readable } = require('stream');
+const fs = require('fs');
+const path = require('path');
 
 const VIDEO_ID_REGEX = /^[a-zA-Z0-9_-]{11}$/;
 
@@ -152,7 +154,8 @@ function extractStreamUrl(videoId, timeoutMs = 15000) {
   }
 
   return new Promise((resolve, reject) => {
-    const ytdlBin = process.env.YT_DLP_PATH || 'yt-dlp';
+    const localYtdl = path.resolve(process.cwd(), process.platform === 'win32' ? 'yt-dlp.exe' : 'yt-dlp');
+    const ytdlBin = process.env.YT_DLP_PATH || (fs.existsSync(localYtdl) ? localYtdl : 'yt-dlp');
     const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
     const args = [
       '-f', 'ba/b',

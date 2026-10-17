@@ -33,6 +33,7 @@ const appState = {
   crossfadeCurve: (typeof localStorage !== 'undefined' && localStorage.getItem('isa_crossfade_curve')) || 'equal-power', // 'equal-power' | 'linear' | 'exponential'
   volume: parseFloat((typeof localStorage !== 'undefined' && localStorage.getItem('isa_volume')) || '0.8'),
   isMuted: false,
+  wakeLock: null, // Screen Wake Lock for background/off-screen playback
 
   // UI State
   isExpanded: false,
@@ -309,16 +310,19 @@ class WebAudioCrossfadeEngine {
       setBufferingUI(false);
       setPlayPauseUI(true);
       this.startYouTubeTicker();
+      ensureWakeLockForPlayback();
     } else if (state === 2) { // PAUSED
       appState.isPlaying = false;
       setBufferingUI(false);
       setPlayPauseUI(false);
       this.stopYouTubeTicker();
+      releaseWakeLock();
     } else if (state === 3) { // BUFFERING
       setBufferingUI(true);
     } else if (state === 0) { // ENDED
       setBufferingUI(false);
       this.stopYouTubeTicker();
+      releaseWakeLock();
       onAutoAdvance();
     }
   }
@@ -584,6 +588,7 @@ class WebAudioCrossfadeEngine {
           appState.currentTrack = track;
           updateNowPlayingUI(track);
           setPlayPauseUI(true);
+          ensureWakeLockForPlayback();
           if (typeof recordRecentTrack === 'function') {
             recordRecentTrack(track);
           }
@@ -650,6 +655,8 @@ class WebAudioCrossfadeEngine {
           this.ytPlayer.setVolume(Math.round(appState.volume * 100));
         }
         this.ytPlayer.playVideo();
+        // Request wake lock when YouTube playback starts
+        ensureWakeLockForPlayback();
       } catch (err) {
         console.warn('[YouTube Play Video Error]:', err);
         setBufferingUI(false);
@@ -762,11 +769,13 @@ class WebAudioCrossfadeEngine {
           appState.isPlaying = false;
           setPlayPauseUI(false);
           this.stopYouTubeTicker();
+          releaseWakeLock();
         } else {
           this.ytPlayer.playVideo();
           appState.isPlaying = true;
           setPlayPauseUI(true);
           this.startYouTubeTicker();
+          ensureWakeLockForPlayback();
         }
         return;
       } catch (err) {
@@ -782,11 +791,13 @@ class WebAudioCrossfadeEngine {
       activeDeck.audio.play().then(() => {
         appState.isPlaying = true;
         setPlayPauseUI(true);
+        ensureWakeLockForPlayback();
       }).catch(console.warn);
     } else {
       activeDeck.audio.pause();
       appState.isPlaying = false;
       setPlayPauseUI(false);
+      releaseWakeLock();
     }
   }
 
@@ -976,12 +987,53 @@ async function loadOfflineTracksIndex() {
   try {
     const tracks = await getAllOfflineTracks();
     downloadedTrackIds.clear();
-    tracks.forEach(t => downloadedTrackIds.add(t.videoId));
-    tracks.forEach(t => updateDownloadButtonsUI(t.videoId, true));
+    let purgedCount = 0;
+
+    for (const t of tracks) {
+      // Validate offline audio blob:
+      // If blob size is less than 200,000 bytes (~200KB), it was the legacy 2-second test fallback beep!
+      if (t.blob && t.blob.size < 200000) {
+        await deleteOfflineTrack(t.videoId);
+        purgedCount++;
+        console.warn(`[Offline Purge] Removed legacy test beep track: "${t.title}" (${t.blob.size} bytes)`);
+      } else {
+        downloadedTrackIds.add(t.videoId);
+        updateDownloadButtonsUI(t.videoId, true);
+      }
+    }
+
+    if (purgedCount > 0) {
+      showToast(`Cleaned ${purgedCount} outdated test audio files. Please re-download tracks online.`, 'info');
+      renderOfflineView();
+    }
+
     const countEl = document.getElementById('offline-count');
-    if (countEl) countEl.textContent = tracks.length;
+    if (countEl) countEl.textContent = downloadedTrackIds.size;
   } catch (err) {
     console.warn('[OfflineDB] load index error:', err);
+  }
+}
+
+async function clearAllOfflineTracks() {
+  if (!confirm('Delete all offline downloaded songs from this device?')) return;
+  try {
+    const db = await openOfflineDB();
+    const tx = db.transaction([OFFLINE_STORE_NAME], 'readwrite');
+    const store = tx.objectStore(OFFLINE_STORE_NAME);
+    store.clear();
+    tx.oncomplete = () => {
+      downloadedTrackIds.clear();
+      document.querySelectorAll('.btn-download-track').forEach(b => {
+        b.classList.remove('is-downloaded', 'is-downloading');
+        b.setAttribute('title', 'Download for offline playback');
+      });
+      const countEl = document.getElementById('offline-count');
+      if (countEl) countEl.textContent = '0';
+      showToast('All offline downloads cleared.', 'info');
+      renderOfflineView();
+    };
+  } catch (err) {
+    console.error('[clearAllOfflineTracks error]:', err);
   }
 }
 
@@ -1149,6 +1201,49 @@ function pauseBackgroundAudioTether() {
   } catch (_) {}
 }
 
+// Wake Lock API for screen-off playback
+let wakeLock = null;
+
+async function requestWakeLock() {
+  if (typeof navigator === 'undefined' || !('wakeLock' in navigator)) {
+    console.log('[Wake Lock] Wake Lock API not supported');
+    return false;
+  }
+
+  try {
+    if (!wakeLock || wakeLock.released) {
+      wakeLock = await navigator.wakeLock.request('screen');
+      appState.wakeLock = wakeLock;
+
+      wakeLock.addEventListener('release', () => {
+        console.log('[Wake Lock] Screen Wake Lock released');
+        appState.wakeLock = null;
+      });
+
+      console.log('[Wake Lock] Screen Wake Lock acquired for background playback');
+    }
+    return true;
+  } catch (err) {
+    console.warn('[Wake Lock] Failed to acquire wake lock:', err.name, err.message);
+    return false;
+  }
+}
+
+function releaseWakeLock() {
+  if (wakeLock && !wakeLock.released) {
+    wakeLock.release().catch(() => {});
+    wakeLock = null;
+    appState.wakeLock = null;
+    console.log('[Wake Lock] Screen Wake Lock manually released');
+  }
+}
+
+function ensureWakeLockForPlayback() {
+  if (appState.isPlaying && appState.currentTrack) {
+    requestWakeLock();
+  }
+}
+
 function updateMediaSession(track) {
   if (typeof navigator === 'undefined' || !('mediaSession' in navigator)) return;
   if (!track) return;
@@ -1267,6 +1362,8 @@ function setupBackgroundVisibilityWatcher() {
       // Screen locked or tab moved to background
       if (appState.isPlaying) {
         ensureBackgroundAudioTether();
+        // Request wake lock to keep playback alive when screen is off
+        ensureWakeLockForPlayback();
         if (engine.activeMode === 'youtube' && engine.ytPlayer && typeof engine.ytPlayer.getPlayerState === 'function') {
           try {
             const ytState = engine.ytPlayer.getPlayerState();
@@ -1289,6 +1386,8 @@ function setupBackgroundVisibilityWatcher() {
     if (appState.isPlaying && appState.currentTrack) {
       updateMediaSession(appState.currentTrack);
       updateMediaSessionPlaybackState(true);
+      // Re-acquire wake lock when returning to foreground
+      ensureWakeLockForPlayback();
     }
   });
 }
@@ -1535,6 +1634,15 @@ function initDOM() {
         return;
       }
       handleDownloadClick(appState.currentTrack, expDlBtn);
+    });
+  }
+
+  // 3d. Clear All Offline Downloads Button
+  const clearOfflineBtn = document.getElementById('btn-clear-offline');
+  if (clearOfflineBtn) {
+    clearOfflineBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      clearAllOfflineTracks();
     });
   }
 
@@ -3078,6 +3186,7 @@ function switchSettingsTab(tabName) {
   if (tabName === 'profile') refreshQuotaMeter();
   if (tabName === 'api-keys') loadApiKeysList();
   if (tabName === 'quota-stats') loadQuotaStats();
+  if (tabName === 'playback') loadPlaybackSettings();
 }
 
       async function loadApiKeysList() {

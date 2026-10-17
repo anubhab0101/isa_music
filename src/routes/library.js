@@ -7,7 +7,7 @@ const router = express.Router();
 const VIDEO_ID_REGEX = /^[a-zA-Z0-9_-]{11}$/;
 
 // Handler for adding / updating a liked track
-const handleLike = (req, res) => {
+const handleLike = async (req, res) => {
   try {
     const userId = req.user.id;
     const { videoId, title, artist, thumbnail } = req.body || {};
@@ -42,9 +42,9 @@ const handleLike = (req, res) => {
         liked_at = CURRENT_TIMESTAMP
     `);
 
-    upsertStmt.run(userId, cleanVideoId, cleanTitle, cleanArtist, cleanThumbnail);
+    await upsertStmt.run(userId, cleanVideoId, cleanTitle, cleanArtist, cleanThumbnail);
 
-    const track = db.prepare(`
+    const track = await db.prepare(`
       SELECT video_id AS videoId, title, artist, thumbnail, liked_at AS likedAt
       FROM liked_library
       WHERE user_id = ? AND video_id = ?
@@ -54,11 +54,11 @@ const handleLike = (req, res) => {
       success: true,
       message: 'Track added to liked library',
       track: {
-        videoId: track.videoId,
-        title: track.title,
-        artist: track.artist,
-        thumbnail: track.thumbnail,
-        likedAt: track.likedAt
+        videoId: track ? track.videoId : cleanVideoId,
+        title: track ? track.title : cleanTitle,
+        artist: track ? track.artist : cleanArtist,
+        thumbnail: track ? track.thumbnail : cleanThumbnail,
+        likedAt: track ? track.likedAt : new Date().toISOString()
       }
     });
   } catch (error) {
@@ -68,12 +68,12 @@ const handleLike = (req, res) => {
 };
 
 // Handler for fetching user's liked library
-const handleGetLibrary = (req, res) => {
+const handleGetLibrary = async (req, res) => {
   try {
     const userId = req.user.id;
     const db = getDb();
 
-    const tracks = db.prepare(`
+    const tracks = await db.prepare(`
       SELECT id, video_id AS videoId, title, artist, thumbnail, liked_at AS likedAt
       FROM liked_library
       WHERE user_id = ?
@@ -91,7 +91,7 @@ const handleGetLibrary = (req, res) => {
 };
 
 // Handler for unliking / removing a track
-const handleUnlike = (req, res) => {
+const handleUnlike = async (req, res) => {
   try {
     const userId = req.user.id;
     const { videoId } = req.params;
@@ -104,7 +104,7 @@ const handleUnlike = (req, res) => {
     const db = getDb();
 
     const deleteStmt = db.prepare('DELETE FROM liked_library WHERE user_id = ? AND video_id = ?');
-    const result = deleteStmt.run(userId, cleanVideoId);
+    const result = await deleteStmt.run(userId, cleanVideoId);
 
     if (result.changes === 0) {
       return res.status(404).json({ error: 'Track not found in liked library' });
