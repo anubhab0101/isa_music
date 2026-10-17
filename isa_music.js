@@ -2972,6 +2972,7 @@ function setupAuthModal() {
   const tabLogin = document.getElementById('tab-login');
   const tabRegister = document.getElementById('tab-register');
   const tabProfile = document.getElementById('tab-profile');
+  const tabPlayback = document.getElementById('tab-playback');
   const tabApiKeys = document.getElementById('tab-api-keys');
   const tabQuotaStats = document.getElementById('tab-quota-stats');
   const addKeyForm = document.getElementById('add-key-form');
@@ -3018,6 +3019,7 @@ function setupAuthModal() {
 
   // Settings tab switching
   if (tabProfile) tabProfile.addEventListener('click', () => switchSettingsTab('profile'));
+  if (tabPlayback) tabPlayback.addEventListener('click', () => switchSettingsTab('playback'));
   if (tabApiKeys) tabApiKeys.addEventListener('click', () => switchSettingsTab('api-keys'));
   if (tabQuotaStats) tabQuotaStats.addEventListener('click', () => switchSettingsTab('quota-stats'));
 
