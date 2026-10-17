@@ -34,6 +34,10 @@ const appState = {
   volume: parseFloat((typeof localStorage !== 'undefined' && localStorage.getItem('isa_volume')) || '0.8'),
   isMuted: false,
   wakeLock: null, // Screen Wake Lock for background/off-screen playback
+  // Playback Settings (persisted)
+  wakeLockEnabled: (typeof localStorage !== 'undefined' && localStorage.getItem('isa_wake_lock_enabled') !== 'false'),
+  bgTetherEnabled: (typeof localStorage !== 'undefined' && localStorage.getItem('isa_bg_tether_enabled') !== 'false'),
+  autoResumeEnabled: (typeof localStorage !== 'undefined' && localStorage.getItem('isa_auto_resume_enabled') !== 'false'),
 
   // UI State
   isExpanded: false,
@@ -1160,13 +1164,20 @@ async function renderOfflineView() {
 // ============================================================================
 // 3c. BACKGROUND PLAYBACK, MEDIASESSION & PICTURE-IN-PICTURE ENGINE
 // ============================================================================
-
 // Silent 1-second WAV audio loop to keep mobile audio session alive in pocket/background
 const SILENT_WAV_DATA_URI = 'data:audio/wav;base64,UklGRjIAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YRAAAAAAAAAAAAAAAAAAAAAA';
 
 let bgTetherAudio = null;
 
+function ensureWakeLockForPlayback() {
+  if (!appState.wakeLockEnabled) return;
+  if (appState.isPlaying && appState.currentTrack) {
+    requestWakeLock();
+  }
+}
+
 function ensureBackgroundAudioTether() {
+  if (!appState.bgTetherEnabled) return;
   try {
     if (!bgTetherAudio) {
       bgTetherAudio = document.getElementById('bg-audio-tether');
@@ -1388,6 +1399,10 @@ function setupBackgroundVisibilityWatcher() {
       updateMediaSessionPlaybackState(true);
       // Re-acquire wake lock when returning to foreground
       ensureWakeLockForPlayback();
+    }
+    // Auto-resume playback when returning to app (if enabled)
+    if (appState.autoResumeEnabled && appState.currentTrack && !appState.isPlaying) {
+      engine.togglePlayPause();
     }
   });
 }
@@ -3418,6 +3433,79 @@ function updateUserUI(user) {
       const label = mobileNavAuth.querySelector('span');
       if (label) label.textContent = 'Profile';
     }
+  }
+}
+
+// ----------------------------------------------------------------------------
+// Playback Settings Load & Save
+// ----------------------------------------------------------------------------
+function loadPlaybackSettings() {
+  const wakeLockToggle = document.getElementById('toggle-wake-lock');
+  const bgTetherToggle = document.getElementById('toggle-bg-tether');
+  const autoResumeToggle = document.getElementById('toggle-auto-resume');
+  const crossfadeSlider = document.getElementById('crossfade-duration-slider');
+  const crossfadeDisplay = document.getElementById('crossfade-value-display');
+  const crossfadeCurveSelect = document.getElementById('crossfade-curve-select');
+
+  if (wakeLockToggle) {
+    wakeLockToggle.checked = appState.wakeLockEnabled;
+    wakeLockToggle.addEventListener('change', () => {
+      appState.wakeLockEnabled = wakeLockToggle.checked;
+      localStorage.setItem('isa_wake_lock_enabled', appState.wakeLockEnabled);
+      if (appState.wakeLockEnabled && appState.isPlaying) {
+        ensureWakeLockForPlayback();
+      } else if (!appState.wakeLockEnabled) {
+        releaseWakeLock();
+      }
+      showToast(`Wake Lock ${appState.wakeLockEnabled ? 'enabled' : 'disabled'}`);
+    });
+  }
+
+  if (bgTetherToggle) {
+    bgTetherToggle.checked = appState.bgTetherEnabled;
+    bgTetherToggle.addEventListener('change', () => {
+      appState.bgTetherEnabled = bgTetherToggle.checked;
+      localStorage.setItem('isa_bg_tether_enabled', appState.bgTetherEnabled);
+      if (!appState.bgTetherEnabled) {
+        pauseBackgroundAudioTether();
+      } else if (appState.isPlaying) {
+        ensureBackgroundAudioTether();
+      }
+      showToast(`Background Audio Tether ${appState.bgTetherEnabled ? 'enabled' : 'disabled'}`);
+    });
+  }
+
+  if (autoResumeToggle) {
+    autoResumeToggle.checked = appState.autoResumeEnabled;
+    autoResumeToggle.addEventListener('change', () => {
+      appState.autoResumeEnabled = autoResumeToggle.checked;
+      localStorage.setItem('isa_auto_resume_enabled', appState.autoResumeEnabled);
+      showToast(`Auto-resume ${appState.autoResumeEnabled ? 'enabled' : 'disabled'}`);
+    });
+  }
+
+  if (crossfadeSlider && crossfadeDisplay) {
+    crossfadeSlider.value = appState.crossfadeDuration;
+    crossfadeDisplay.textContent = `${appState.crossfadeDuration.toFixed(1)}s`;
+    crossfadeSlider.addEventListener('input', () => {
+      const val = parseFloat(crossfadeSlider.value);
+      crossfadeDisplay.textContent = `${val.toFixed(1)}s`;
+    });
+    crossfadeSlider.addEventListener('change', () => {
+      const val = parseFloat(crossfadeSlider.value);
+      appState.crossfadeDuration = val;
+      localStorage.setItem('isa_crossfade_duration', val);
+      showToast(`Crossfade duration: ${val.toFixed(1)}s`);
+    });
+  }
+
+  if (crossfadeCurveSelect) {
+    crossfadeCurveSelect.value = appState.crossfadeCurve;
+    crossfadeCurveSelect.addEventListener('change', () => {
+      appState.crossfadeCurve = crossfadeCurveSelect.value;
+      localStorage.setItem('isa_crossfade_curve', appState.crossfadeCurve);
+      showToast(`Crossfade curve: ${appState.crossfadeCurve}`);
+    });
   }
 }
 
